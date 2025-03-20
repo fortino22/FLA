@@ -8,114 +8,138 @@ import helpers.Alert;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class UpgradeMenuView {
-
-    private static final String SEPARATOR = "═════════════════════════════";
+    private static final String MENU_DIVIDER = "═════════════════════════════";
+    private static final int MAX_RESTAURANT_SEATS = 13;
+    private static final int MAX_STAFF_COUNT = 7;
+    private static final int MAX_ATTRIBUTE_LEVEL = 5;
+    private static final int WAITER_HIRING_BASE_COST = 150;
+    private static final int CHEF_HIRING_BASE_COST = 200;
+    private static final int SEAT_EXPANSION_MULTIPLIER = 100;
+    private static final int STAFF_UPGRADE_COST = 150;
 
     public UpgradeMenuView() {
         Alert.restaurantInitializationDebug("UpgradeMenuView initialized");
     }
 
-    public void showUpgradeMenu(Restaurant restaurant) {
+    public void displayUpgradeMainMenu(Restaurant restaurant) {
         if (restaurant == null) {
-            Alert.restaurantInitializationDebug("Restaurant object is null in showUpgradeMenu.");
+            Alert.restaurantInitializationDebug("Restaurant object is null in displayUpgradeMainMenu.");
             return;
         }
 
         Cleaner.cls();
-        printMenuHeaderFooter("Restaurant Upgrade Options");
+        renderMenuFrame("Restaurant Upgrade Options");
+        showRestaurantStatus(restaurant);
+        listUpgradeOptions(restaurant);
+        renderMenuFrame("");
+    }
 
+    private void showRestaurantStatus(Restaurant restaurant) {
         System.out.println("Restaurant Name: " + restaurant.getName());
         System.out.println("Current Balance: Rp. " + restaurant.getMoney());
         System.out.println("Current Score: " + restaurant.getScore());
         System.out.println("Available Seats: " + restaurant.getSeats());
-
-        System.out.println("1. Expand Restaurant Seating (Cost: Rp. " + (100 * restaurant.getSeats()) + ")");
-        System.out.println("2. Add a New Employee");
-        System.out.println("3. Upgrade Waiter (Cost: Rp. 150)");
-        System.out.println("4. Upgrade Chef (Cost: Rp. 150)");
-        System.out.println("5. Return to Main Menu");
-
-        printMenuHeaderFooter("");
     }
 
-    public void showHireMenu(Restaurant restaurant) {
-        Cleaner.cls();
-        printMenuHeaderFooter("Employee Hiring Options");
+    private void listUpgradeOptions(Restaurant restaurant) {
+        int expansionCost = SEAT_EXPANSION_MULTIPLIER * restaurant.getSeats();
+        System.out.println("1. Expand Restaurant Seating (Cost: Rp. " + expansionCost + ")");
+        System.out.println("2. Add a New Employee");
+        System.out.println("3. Upgrade Waiter (Cost: Rp. " + STAFF_UPGRADE_COST + ")");
+        System.out.println("4. Upgrade Chef (Cost: Rp. " + STAFF_UPGRADE_COST + ")");
+        System.out.println("5. Return to Main Menu");
+    }
 
-        System.out.println("1. Hire a Waiter (Cost: Rp. " + (150 * (restaurant.getWaiters().size() + 1)) + ")");
-        System.out.println("2. Hire a Chef (Cost: Rp. " + (200 * (restaurant.getChefs().size() + 1)) + ")");
+    public void displayStaffRecruitmentMenu(Restaurant restaurant) {
+        Cleaner.cls();
+        renderMenuFrame("Employee Hiring Options");
+
+        int waiterCost = WAITER_HIRING_BASE_COST * (restaurant.getWaiters().size() + 1);
+        int chefCost = CHEF_HIRING_BASE_COST * (restaurant.getChefs().size() + 1);
+
+        System.out.println("1. Hire a Waiter (Cost: Rp. " + waiterCost + ")");
+        System.out.println("2. Hire a Chef (Cost: Rp. " + chefCost + ")");
         System.out.println("3. Go Back");
 
-        printMenuHeaderFooter("");
+        renderMenuFrame("");
     }
 
-    public void showWaiterList(CopyOnWriteArrayList<Waiter> waiters) {
+    public void displayWaiterRoster(CopyOnWriteArrayList<Waiter> waiters) {
         Cleaner.cls();
-        printMenuHeaderFooter("Waiter Roster");
+        renderMenuFrame("Waiter Roster");
 
         if (waiters.isEmpty()) {
             System.out.println("No waiters are currently employed.");
         } else {
-            for (int i = 0; i < waiters.size(); i++) {
-                Waiter w = waiters.get(i);
-                System.out.printf("%d. %s (Speed: %d)\n", i + 1, w.getInitial(), w.getSpeed());
-            }
+            renderWaiterList(waiters);
         }
 
         System.out.println("0. Return to Previous Menu");
-        printMenuHeaderFooter("");
+        renderMenuFrame("");
     }
 
-    public void showChefList(CopyOnWriteArrayList<Chef> chefs) {
+    private void renderWaiterList(CopyOnWriteArrayList<Waiter> waiters) {
+        for (int index = 0; index < waiters.size(); index++) {
+            Waiter currentWaiter = waiters.get(index);
+            System.out.printf("%d. %s (Speed: %d)\n",
+                    index + 1, currentWaiter.getInitial(), currentWaiter.getSpeed());
+        }
+    }
+
+    public void displayChefRoster(CopyOnWriteArrayList<Chef> chefs) {
         Cleaner.cls();
-        printMenuHeaderFooter("Chef Roster");
+        renderMenuFrame("Chef Roster");
 
         if (chefs.isEmpty()) {
             System.out.println("No chefs are currently employed.");
         } else {
-            for (int i = 0; i < chefs.size(); i++) {
-                Chef c = chefs.get(i);
-                System.out.printf("%d. %s (Speed: %d, Skill: %d)\n",
-                        i + 1, c.getInitial(), c.getSpeed(), c.getSkill());
-            }
+            renderChefList(chefs);
         }
 
         System.out.println("0. Return to Previous Menu");
-        printMenuHeaderFooter("");
+        renderMenuFrame("");
     }
 
-    public void showChefUpgradeOptions() {
-        System.out.println("═════════════════════════════");
+    private void renderChefList(CopyOnWriteArrayList<Chef> chefs) {
+        for (int index = 0; index < chefs.size(); index++) {
+            Chef currentChef = chefs.get(index);
+            System.out.printf("%d. %s (Speed: %d, Skill: %d)\n",
+                    index + 1, currentChef.getInitial(), currentChef.getSpeed(), currentChef.getSkill());
+        }
+    }
+
+    public void displayChefUpgradeMenu() {
+        System.out.println(MENU_DIVIDER);
         System.out.println("1. Improve Speed");
         System.out.println("2. Improve Skill");
-        System.out.println("═════════════════════════════");
+        System.out.println(MENU_DIVIDER);
     }
 
-    public void showMaxSeatsError() {
-        showError("You have reached the maximum seating capacity (13 seats).");
+    public void displaySeatingLimitError() {
+        displayErrorMessage("You have reached the maximum seating capacity (" + MAX_RESTAURANT_SEATS + " seats).");
     }
 
-    public void showMaxEmployeesError() {
-        showError("You have reached the maximum number of employees (7 employees).");
+    public void displayStaffLimitError() {
+        displayErrorMessage("You have reached the maximum number of employees (" + MAX_STAFF_COUNT + " employees).");
     }
 
-    public void showMaxStatError() {
-        showError("This stat level has reached its maximum (Level 5).");
+    public void displayAttributeLimitError() {
+        displayErrorMessage("This stat level has reached its maximum (Level " + MAX_ATTRIBUTE_LEVEL + ").");
     }
 
-    public void showInsufficientFundsError() {
-        showError("You do not have enough funds to complete this action.");
+    public void displayInsufficientFundsError() {
+        displayErrorMessage("You do not have enough funds to complete this action.");
     }
 
-    private void printMenuHeaderFooter(String menuName) {
-        System.out.println(SEPARATOR);
-        if (!menuName.isEmpty()) {
-            System.out.println(menuName);
+    private void renderMenuFrame(String menuTitle) {
+        System.out.println(MENU_DIVIDER);
+        if (!menuTitle.isEmpty()) {
+            System.out.println(menuTitle);
         }
-        System.out.println(SEPARATOR);
+        System.out.println(MENU_DIVIDER);
     }
 
-    private void showError(String errorMessage) {
+    private void displayErrorMessage(String errorMessage) {
         System.out.println("Error: " + errorMessage);
     }
 }

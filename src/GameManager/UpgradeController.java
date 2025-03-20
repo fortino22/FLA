@@ -1,7 +1,7 @@
 package GameManager;
 
 import controllers.facades.GameFacade;
-import controllers.managers.HighscoreManager;
+import controllers.singleton.HighscoreSingleton;
 import models.entity.Restaurant;
 import models.entity.*;
 import helpers.Validator;
@@ -12,12 +12,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class UpgradeController {
     private final GameFacade game;
     private final UpgradeMenuView view;
-    private final HighscoreManager highscore;
+    private static final int SEAT_EXPANSION_MULTIPLIER = 100;
+    private static final int WAITER_HIRING_BASE_COST = 150;
+    private static final int CHEF_HIRING_BASE_COST = 200;
+    private static final int STAFF_UPGRADE_COST = 150;
+    private static final int MAX_RESTAURANT_SEATS = 13;
+    private static final int MAX_STAFF_COUNT = 7;
+    private static final int MAX_ATTRIBUTE_LEVEL = 5;
 
     public UpgradeController(Restaurant restaurant) {
         this.game = GameFacade.getInstance();
         this.view = new UpgradeMenuView();
-        this.highscore = HighscoreManager.getInstance();
     }
 
     private Restaurant activeRestaurant() {
@@ -26,77 +31,77 @@ public class UpgradeController {
 
     public void start() {
         while (true) {
-            view.showUpgradeMenu(activeRestaurant());
+            view.displayUpgradeMainMenu(activeRestaurant());
 
             int choice = Validator.getValidIntInput(() -> System.out.print("Choose menu [1-5]: "), 1, 5);
 
             if (choice == 5) return;
 
             Transition.execute(choice,
-                    this::addSeats,
-                    this::showEmployeeMenu,
-                    this::upgradeWaiterStats,
-                    this::upgradeChefStats
+                    this::expandSeating,
+                    this::showStaffRecruitmentMenu,
+                    this::upgradeWaiterAttributes,
+                    this::upgradeChefAttributes
             );
         }
     }
 
-    private void addSeats() {
+    private void expandSeating() {
         Restaurant restaurant = activeRestaurant();
-        if (restaurant.getSeats() >= 13) {
-            view.showMaxSeatsError();
+        if (restaurant.getSeats() >= MAX_RESTAURANT_SEATS) {
+            view.displaySeatingLimitError();
             return;
         }
 
-        int cost = 100 * restaurant.getSeats();
-        if (restaurant.getMoney() < cost) {
-            view.showInsufficientFundsError();
+        int expansionCost = SEAT_EXPANSION_MULTIPLIER * restaurant.getSeats();
+        if (restaurant.getMoney() < expansionCost) {
+            view.displayInsufficientFundsError();
             return;
         }
 
-        restaurant.setMoney(restaurant.getMoney() - cost);
+        restaurant.setMoney(restaurant.getMoney() - expansionCost);
         restaurant.setSeats(restaurant.getSeats() + 1);
     }
 
-    private void showEmployeeMenu() {
+    private void showStaffRecruitmentMenu() {
         while (true) {
-            view.showHireMenu(activeRestaurant());
+            view.displayStaffRecruitmentMenu(activeRestaurant());
 
             int choice = Validator.getValidIntInput(() -> System.out.print("Choose employee type [1-3]: "), 1, 3);
 
             if (choice == 3) return;
 
-            Transition.execute(choice, this::hireWaiter, this::hireChef);
+            Transition.execute(choice, this::recruitWaiter, this::recruitChef);
         }
     }
 
-    private void hireWaiter() {
-        hireEmployee(activeRestaurant().getWaiters(), 150, game::addWaiter);
+    private void recruitWaiter() {
+        recruitStaffMember(activeRestaurant().getWaiters(), WAITER_HIRING_BASE_COST, game::addWaiter);
     }
 
-    private void hireChef() {
-        hireEmployee(activeRestaurant().getChefs(), 200, game::addChef);
+    private void recruitChef() {
+        recruitStaffMember(activeRestaurant().getChefs(), CHEF_HIRING_BASE_COST, game::addChef);
     }
 
-    private <T> void hireEmployee(CopyOnWriteArrayList<T> employees, int baseCost, Runnable addEmployee) {
+    private <T> void recruitStaffMember(CopyOnWriteArrayList<T> staffList, int baseCost, Runnable addStaffMember) {
         Restaurant restaurant = activeRestaurant();
 
-        if (employees.size() >= 7) {
-            view.showMaxEmployeesError();
+        if (staffList.size() >= MAX_STAFF_COUNT) {
+            view.displayStaffLimitError();
             return;
         }
 
-        int cost = baseCost * (employees.size() + 1);
-        if (restaurant.getMoney() < cost) {
-            view.showInsufficientFundsError();
+        int hiringCost = baseCost * (staffList.size() + 1);
+        if (restaurant.getMoney() < hiringCost) {
+            view.displayInsufficientFundsError();
             return;
         }
 
-        restaurant.setMoney(restaurant.getMoney() - cost);
-        addEmployee.run();
+        restaurant.setMoney(restaurant.getMoney() - hiringCost);
+        addStaffMember.run();
     }
 
-    private void upgradeWaiterStats() {
+    private void upgradeWaiterAttributes() {
         CopyOnWriteArrayList<Waiter> waiters = activeRestaurant().getWaiters();
 
         if (waiters.isEmpty()) {
@@ -105,30 +110,30 @@ public class UpgradeController {
         }
 
         while (true) {
-            view.showWaiterList(waiters);
+            view.displayWaiterRoster(waiters);
 
             int choice = Validator.getValidIntInput(() -> System.out.print("Choose waiter [0-" + waiters.size() + "]: "), 0, waiters.size());
 
             if (choice == 0) return;
 
-            Waiter waiter = waiters.get(choice - 1);
-            if (waiter.getSpeed() >= 5) {
-                view.showMaxStatError();
+            Waiter selectedWaiter = waiters.get(choice - 1);
+            if (selectedWaiter.getSpeed() >= MAX_ATTRIBUTE_LEVEL) {
+                view.displayAttributeLimitError();
                 continue;
             }
 
-            if (activeRestaurant().getMoney() < 150) {
-                view.showInsufficientFundsError();
+            if (activeRestaurant().getMoney() < STAFF_UPGRADE_COST) {
+                view.displayInsufficientFundsError();
                 continue;
             }
 
-            waiter.setSpeed(waiter.getSpeed() + 1);
-            activeRestaurant().setMoney(activeRestaurant().getMoney() - 150);
+            selectedWaiter.setSpeed(selectedWaiter.getSpeed() + 1);
+            activeRestaurant().setMoney(activeRestaurant().getMoney() - STAFF_UPGRADE_COST);
             return;
         }
     }
 
-    private void upgradeChefStats() {
+    private void upgradeChefAttributes() {
         CopyOnWriteArrayList<Chef> chefs = activeRestaurant().getChefs();
 
         if (chefs.isEmpty()) {
@@ -137,36 +142,36 @@ public class UpgradeController {
         }
 
         while (true) {
-            view.showChefList(chefs);
+            view.displayChefRoster(chefs);
 
             int choice = Validator.getValidIntInput(() -> System.out.print("Choose chef [0-" + chefs.size() + "]: "), 0, chefs.size());
 
             if (choice == 0) return;
 
-            Chef chef = chefs.get(choice - 1);
-            view.showChefUpgradeOptions();
+            Chef selectedChef = chefs.get(choice - 1);
+            view.displayChefUpgradeMenu();
 
-            int statChoice = Validator.getValidIntInput(() -> System.out.print("Choose stat to upgrade [1-2]: "), 1, 2);
+            int attributeChoice = Validator.getValidIntInput(() -> System.out.print("Choose stat to upgrade [1-2]: "), 1, 2);
 
-            if (activeRestaurant().getMoney() < 150) {
-                view.showInsufficientFundsError();
+            if (activeRestaurant().getMoney() < STAFF_UPGRADE_COST) {
+                view.displayInsufficientFundsError();
                 continue;
             }
 
             boolean upgraded = false;
-            if (statChoice == 1 && chef.getSpeed() < 5) {
-                chef.setSpeed(chef.getSpeed() + 1);
+            if (attributeChoice == 1 && selectedChef.getSpeed() < MAX_ATTRIBUTE_LEVEL) {
+                selectedChef.setSpeed(selectedChef.getSpeed() + 1);
                 upgraded = true;
-            } else if (statChoice == 2 && chef.getSkill() < 5) {
-                chef.setSkill(chef.getSkill() + 1);
+            } else if (attributeChoice == 2 && selectedChef.getSkill() < MAX_ATTRIBUTE_LEVEL) {
+                selectedChef.setSkill(selectedChef.getSkill() + 1);
                 upgraded = true;
             }
 
             if (upgraded) {
-                activeRestaurant().setMoney(activeRestaurant().getMoney() - 150);
+                activeRestaurant().setMoney(activeRestaurant().getMoney() - STAFF_UPGRADE_COST);
                 return;
             } else {
-                view.showMaxStatError();
+                view.displayAttributeLimitError();
             }
         }
     }

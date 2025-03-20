@@ -7,14 +7,12 @@ import controllers.mediators.RestaurantMediator;
 
 public abstract class ParentEntity implements IRestaurant {
     private RestaurantMediator mediator;
-    private String outputString;
     private volatile boolean isPaused = false;
     private String initial;
     protected IStateMachine state;
 
     public ParentEntity(String initial) {
         this.initial = initial;
-        this.outputString = initial;
     }
 
     public String getInitial() {

@@ -7,29 +7,43 @@ import helpers.TableBuilder;
 public class GameView {
 
     public void startGame() {
-        this.start();
+        start();
     }
 
-    public void start() {
-
+    private void start() {
     }
 
     public void displayGame(Restaurant restaurant) {
+        clearScreenAndDisplayInfo(restaurant);
+        displayEntityTables(restaurant);
+    }
+
+    private void clearScreenAndDisplayInfo(Restaurant restaurant) {
         Cleaner.cls();
-        displayRestaurantInfo(restaurant);
-        displayEntities(restaurant);
+        displayRestaurantHeader(restaurant);
+        displayRestaurantStats(restaurant);
+        System.out.println();
     }
 
-    private void displayRestaurantInfo(Restaurant restaurant) {
-        System.out.println("═════════════════════════════");
-        System.out.println("Restaurant: " + restaurant.getName());
-        System.out.println("Money: Rp. " + restaurant.getMoney());
-        System.out.println("Score: " + restaurant.getScore());
-        System.out.println("Seats: " + restaurant.getSeats());
-        System.out.println("═════════════════════════════\n");
+    private void displayRestaurantHeader(Restaurant restaurant) {
+        System.out.println("╔═════════════════════════════╗");
+        System.out.println("║  " + String.format("%-25s", "Restaurant: " + restaurant.getName()) + "  ║");
+        System.out.println("╚═════════════════════════════╝");
     }
 
-    private void displayEntities(Restaurant restaurant) {
-        System.out.println(TableBuilder.CreateTable(restaurant.getCustomers(), restaurant.getWaiters(), restaurant.getChefs()));
+    private void displayRestaurantStats(Restaurant restaurant) {
+        System.out.println("╔═════════════════════════════╗");
+        System.out.println("║  " + String.format("%-25s", "Money: Rp. " + restaurant.getMoney()) + "  ║");
+        System.out.println("║  " + String.format("%-25s", "Score: " + restaurant.getScore()) + "  ║");
+        System.out.println("║  " + String.format("%-25s", "Seats: " + restaurant.getSeats()) + "  ║");
+        System.out.println("╚═════════════════════════════╝");
+    }
+
+    private void displayEntityTables(Restaurant restaurant) {
+        System.out.println(TableBuilder.CreateTable(
+                restaurant.getCustomers(),
+                restaurant.getWaiters(),
+                restaurant.getChefs()
+        ));
     }
 }

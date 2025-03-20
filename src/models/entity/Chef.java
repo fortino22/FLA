@@ -1,7 +1,7 @@
 package models.entity;
 
 import models.states.chefstate.ChefIdle;
-import models.states.chefstate.ChefCook;
+import models.states.chefstate.ChefCooking;
 
 public class Chef extends ParentEntity {
     private int speed;
@@ -52,7 +52,7 @@ public class Chef extends ParentEntity {
     private void assignOrderToChef(Customer customer, Waiter waiter) {
         System.out.println("Chef " + getInitial() + " received order from waiter " + waiter.getInitial());
         currentCustomer = customer;
-        setState(new ChefCook(this, customer.getInitial()));
+        setState(new ChefCooking(this, customer.getInitial()));
     }
 
     public void finishOrder() {

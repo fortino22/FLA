@@ -1,16 +1,19 @@
 package GameManager;
 
 import controllers.facades.GameFacade;
-import controllers.managers.HighscoreManager;
+import controllers.singleton.HighscoreSingleton;
 import helpers.Validator;
 import views.GameView;
 import helpers.Transition;
 import views.PauseMenuView;
 import views.HighscoreView;
+import views.ClosureView;
 import java.util.Scanner;
-import interfaces.IMenuHandler;
 import models.entity.Restaurant;
+
+
 public class GameController {
+
 
     private static final int RESUME_GAME_OPTION = 1;
     private static final int CLOSE_RESTAURANT_OPTION = 3;
@@ -19,50 +22,34 @@ public class GameController {
     private final UpgradeController upgradeController;
     private final GameFacade gameFacade;
     private final GameView gameView;
-    private final Restaurant restaurant;
     private final PauseMenuView pauseMenuView;
     private final HighscoreView highscoreView;
-    private final HighscoreManager highscoreManager;
+    private final ClosureView closureView;
+    private final HighscoreSingleton highscoreManager;
 
     private boolean isGameRunning;
 
     public GameController(Restaurant restaurant) {
-        this.restaurant = restaurant;
         this.gameFacade = GameFacade.getInstance();
         this.gameView = new GameView();
         this.pauseMenuView = new PauseMenuView();
         this.highscoreView = new HighscoreView();
-        this.highscoreManager = HighscoreManager.getInstance();
+        this.closureView = new ClosureView();
+        this.highscoreManager = HighscoreSingleton.getInstance();
         this.upgradeController = new UpgradeController(restaurant);
         this.isGameRunning = true;
     }
 
+
     public void start() {
-        String restaurantName = Validator.getValidStringInput(this::prompRestaurantNameInput, 3, 15);
+        String restaurantName = Validator.getValidStringInput(this::promptRestaurantNameInput, 3, 15);
         gameFacade.initializeGame(restaurantName);
         runGameLoop();
     }
 
     private void runGameLoop() {
         Scanner scanner = new Scanner(System.in);
-        Thread gameThread = new Thread(() -> {
-            try {
-                while (isGameRunning) {
-                    if (!gameFacade.isGamePaused()) {
-                        gameFacade.update();
-                        gameView.displayGame(gameFacade.getCurrentRestaurant());
-                        System.out.println("\nPress 'Enter' to pause the game");
-                    }
-                    Thread.sleep(GAME_LOOP_SLEEP_MS);
-                }
-            } catch (InterruptedException e) {
-                System.out.println("Game thread interrupted.");
-            } catch (Exception e) {
-                System.out.println("An unexpected error occurred in the game loop: " + e.getMessage());
-                e.printStackTrace();
-            }
-        });
-
+        Thread gameThread = createGameThread();
         gameThread.start();
 
         while (isGameRunning) {
@@ -75,6 +62,25 @@ public class GameController {
         scanner.close();
     }
 
+    private Thread createGameThread() {
+        return new Thread(() -> {
+            try {
+                while (isGameRunning) {
+                    if (!gameFacade.isGamePaused()) {
+                        gameFacade.update();
+                        gameView.displayGame(gameFacade.getCurrentRestaurant());
+                        System.out.println("\nPress 'Enter' to pause the game");
+                    }
+                    Thread.sleep(GAME_LOOP_SLEEP_MS);
+                }
+            } catch (InterruptedException e) {
+                System.out.println("Game thread interrupted.");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     private void closeRunningRestaurant() {
         Restaurant activeRestaurant = Restaurant.getActiveRestaurant();
         if (activeRestaurant == null) {
@@ -85,20 +91,17 @@ public class GameController {
         int finalScore = activeRestaurant.getScore();
         String restaurantName = activeRestaurant.getName();
         highscoreManager.addScore(restaurantName, finalScore);
-        displayClosureMessage(restaurantName, finalScore);
+
+        closureView.displayClosureMessage(restaurantName, finalScore);
         highscoreView.showHighscores(highscoreManager.getHighscores());
+
+        promptToContinue();
         terminateGame();
     }
 
-
-
-    private void displayClosureMessage(String restaurantName, int finalScore) {
-        System.out.println("\n═════════════════════════════");
-        System.out.println("     RESTAURANT CLOSED");
-        System.out.println("═════════════════════════════");
-        System.out.println("Restaurant: " + restaurantName);
-        System.out.println("Final Score: " + finalScore);
-        System.out.println("═════════════════════════════");
+    private void promptToContinue() {
+        System.out.println("\nPress Enter to continue...");
+        new Scanner(System.in).nextLine();
     }
 
     private void displayPauseMenu() {
@@ -111,23 +114,17 @@ public class GameController {
             );
 
             boolean shouldBreak = Transition.execute(choice,
-                    new IMenuHandler() {
-                        public boolean execute() {
-                            gameFacade.resume();
-                            return true;
-                        }
+                    () -> {
+                        gameFacade.resume();
+                        return true;
                     },
-                    new IMenuHandler() {
-                        public boolean execute() {
-                            upgradeController.start();
-                            return false;
-                        }
+                    () -> {
+                        upgradeController.start();
+                        return false;
                     },
-                    new IMenuHandler() {
-                        public boolean execute() {
-                            closeRunningRestaurant();
-                            return true;
-                        }
+                    () -> {
+                        closeRunningRestaurant();
+                        return true;
                     }
             );
 
@@ -137,8 +134,6 @@ public class GameController {
         }
     }
 
-
-
     private void terminateGame() {
         isGameRunning = false;
         gameFacade.terminate();
@@ -146,7 +141,7 @@ public class GameController {
         System.exit(0);
     }
 
-    public void prompRestaurantNameInput() {
+    public void promptRestaurantNameInput() {
         System.out.print("Enter Restaurant Name [3 - 15 Characters]: ");
     }
 }

@@ -1,9 +1,9 @@
 package models.states.customerstate;
 
 import models.entity.Customer;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class CustomerOrder extends BaseState {
+public class CustomerOrder extends StartingState {
     private int toleranceTimer = 0;
     
     public CustomerOrder(Customer customer) {
@@ -34,6 +34,6 @@ public class CustomerOrder extends BaseState {
     
     @Override
     public void changeState(String waiterName) {
-        entity.setState(new CustomerOrderWaiter((Customer)entity, waiterName));
+        entity.setState(new CustomerOrderToWaiter((Customer)entity, waiterName));
     }
 }

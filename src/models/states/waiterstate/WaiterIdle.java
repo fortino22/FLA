@@ -1,9 +1,9 @@
 package models.states.waiterstate;
 
 import models.entity.Waiter;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class WaiterIdle extends BaseState {
+public class WaiterIdle extends StartingState {
     public WaiterIdle(Waiter waiter) {
         super(waiter);
     }
@@ -20,6 +20,6 @@ public class WaiterIdle extends BaseState {
 
     @Override
     public void changeState(String customerName) {
-        entity.setState(new WaiterTakeOrder((Waiter)entity, customerName));
+        entity.setState(new WaiterTakeOrderFromCustomer((Waiter)entity, customerName));
     }
 }

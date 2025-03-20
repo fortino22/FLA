@@ -6,137 +6,7 @@ import models.entity.*;
 import interfaces.ITableDesign;
 
 public class TableBuilder {
-    private static final int columnWidth = 35;
-
-    public static <T> String joinInitials(List<T> items, Function<T, String> extractInitial) {
-        StringBuilder result = new StringBuilder();
-        for (T item : items) {
-            result.append(extractInitial.apply(item));
-        }
-        return result.toString();
-    }
-
-    public static String CreateTable(List<Customer> customers, List<Waiter> waiters, List<Chef> chefs) {
-        ITableDesign<Customer> customerFormatter = createCustomerFormatter();
-        ITableDesign<Waiter> waiterFormatter = createWaiterFormatter();
-        ITableDesign<Chef> chefFormatter = createChefFormatter();
-
-        StringBuilder table = new StringBuilder();
-        String border = buildTableBorder(customerFormatter, waiterFormatter, chefFormatter);
-
-        table.append(border).append("\n");
-        table.append(buildHeaderRow(customerFormatter, waiterFormatter, chefFormatter)).append("\n");
-        table.append(border).append("\n");
-
-        int maxRows = Math.max(Math.max(customers.size(), waiters.size()), chefs.size());
-        for (int i = 0; i < maxRows; i++) {
-            table.append(buildDataRow(i, customers, customerFormatter,
-                    waiters, waiterFormatter,
-                    chefs, chefFormatter)).append("\n");
-        }
-
-        table.append(border);
-        return table.toString();
-    }
-
-    private static String buildDataRow(int index, List<Customer> customers, ITableDesign<Customer> customerFormatter, List<Waiter> waiters, ITableDesign<Waiter> waiterFormatter, List<Chef> chefs, ITableDesign<Chef> chefFormatter) {
-        StringBuilder row = new StringBuilder();
-        row.append(index < customers.size() ? customerFormatter.formatRow(customers.get(index)) : customerFormatter.formatEmpty());
-        row.append(index < waiters.size() ? waiterFormatter.formatRow(waiters.get(index)) : waiterFormatter.formatEmpty());
-        row.append(index < chefs.size() ? chefFormatter.formatRow(chefs.get(index)) : chefFormatter.formatEmpty());
-        return row + "|";
-    }
-
-    private static String buildHeaderRow(ITableDesign<?>... formatters) {
-        StringBuilder header = new StringBuilder();
-        for (ITableDesign<?> formatter : formatters) {
-            header.append(formatter.formatHeader());
-        }
-        return header + "|";
-    }
-
-    private static String buildTableBorder(ITableDesign<?>... formatters) {
-        StringBuilder border = new StringBuilder();
-        for (ITableDesign<?> formatter : formatters) {
-            border.append(formatter.formatBorder());
-        }
-        return border + "+";
-    }
-
-    private static ITableDesign<Customer> createCustomerFormatter() {
-        return new ITableDesign<Customer>() {
-            public String formatHeader() {
-                return String.format("| %-" + columnWidth + "s", "Customer");
-            }
-
-            public String formatRow(Customer customer) {
-                String stateInfo = customer.getState() != null ? formatStateDetails(customer.getState().getStateName()) : "waiting";
-                return String.format("| %-" + columnWidth + "s", String.format("%s(%d) ~> %s", customer.getInitial(), customer.getTolerance(), stateInfo));
-            }
-
-            public String formatEmpty() {
-                return String.format("| %-" + columnWidth + "s", "");
-            }
-
-            public String formatBorder() {
-                return "+" + "-".repeat(columnWidth + 2);
-            }
-
-            public int getColumnWidth() {
-                return columnWidth + 2;
-            }
-        };
-    }
-
-    private static ITableDesign<Waiter> createWaiterFormatter() {
-        return new ITableDesign<Waiter>() {
-            public String formatHeader() {
-                return String.format("| %-" + columnWidth + "s", "Waiter");
-            }
-
-            public String formatRow(Waiter waiter) {
-                String stateInfo = waiter.getState() != null ? formatStateDetails(waiter.getState().getStateName()) : "waiting";
-                return String.format("| %-" + columnWidth + "s", String.format("%s ~> %s", waiter.getInitial(), stateInfo));
-            }
-
-            public String formatEmpty() {
-                return String.format("| %-" + columnWidth + "s", "");
-            }
-
-            public String formatBorder() {
-                return "+" + "-".repeat(columnWidth + 2);
-            }
-
-            public int getColumnWidth() {
-                return columnWidth + 2;
-            }
-        };
-    }
-
-    private static ITableDesign<Chef> createChefFormatter() {
-        return new ITableDesign<Chef>() {
-            public String formatHeader() {
-                return String.format("| %-" + columnWidth + "s", "Chef");
-            }
-
-            public String formatRow(Chef chef) {
-                String stateInfo = chef.getState() != null ? formatStateDetails(chef.getState().getStateName()) : "waiting";
-                return String.format("| %-" + columnWidth + "s", String.format("%s ~> %s", chef.getInitial(), stateInfo));
-            }
-
-            public String formatEmpty() {
-                return String.format("| %-" + columnWidth + "s", "");
-            }
-
-            public String formatBorder() {
-                return "+" + "-".repeat(columnWidth + 2);
-            }
-
-            public int getColumnWidth() {
-                return columnWidth + 2;
-            }
-        };
-    }
+    private static final int COLUMN_SIZE = 42;
 
     private static String formatStateDetails(String stateName) {
         if (stateName == null) return "waiting";
@@ -149,5 +19,111 @@ public class TableBuilder {
         }
 
         return stateName;
+    }
+
+    @SafeVarargs
+    private static String buildTableBorder(ITableDesign<?>... formatters) {
+        StringBuilder border = new StringBuilder();
+        for (ITableDesign<?> formatter : formatters) {
+            border.append(formatter.formatBorder());
+        }
+        return border + "+";
+    }
+
+    @SafeVarargs
+    private static String buildHeaderRow(ITableDesign<?>... formatters) {
+        StringBuilder header = new StringBuilder();
+        for (ITableDesign<?> formatter : formatters) {
+            header.append(formatter.formatHeader());
+        }
+        return header + "|";
+    }
+
+    private static <T> ITableDesign<T> createEntityFormatter(String headerName, Function<T, String> formatFunction) {
+        return new ITableDesign<T>() {
+            public String formatHeader() {
+                return String.format("| %-" + COLUMN_SIZE + "s", headerName);
+            }
+
+            public String formatRow(T entity) {
+                return String.format("| %-" + COLUMN_SIZE + "s", formatFunction.apply(entity));
+            }
+
+            public String formatEmpty() {
+                return String.format("| %-" + COLUMN_SIZE + "s", "");
+            }
+
+            public String formatBorder() {
+                return "+" + "-".repeat(COLUMN_SIZE + 2);
+            }
+
+            public int getColumnWidth() {
+                return COLUMN_SIZE + 2;
+            }
+        };
+    }
+
+    private static <T1, T2, T3> String buildDataRow(
+            int index,
+            List<T1> entities1, ITableDesign<T1> formatter1,
+            List<T2> entities2, ITableDesign<T2> formatter2,
+            List<T3> entities3, ITableDesign<T3> formatter3) {
+
+        StringBuilder row = new StringBuilder();
+        row.append(index < entities1.size() ? formatter1.formatRow(entities1.get(index)) : formatter1.formatEmpty());
+        row.append(index < entities2.size() ? formatter2.formatRow(entities2.get(index)) : formatter2.formatEmpty());
+        row.append(index < entities3.size() ? formatter3.formatRow(entities3.get(index)) : formatter3.formatEmpty());
+        return row + "|";
+    }
+
+    private static <T1, T2, T3> String buildTable(
+            List<T1> entities1, ITableDesign<T1> formatter1,
+            List<T2> entities2, ITableDesign<T2> formatter2,
+            List<T3> entities3, ITableDesign<T3> formatter3) {
+
+        StringBuilder table = new StringBuilder();
+        ITableDesign<?>[] formatters = {formatter1, formatter2, formatter3};
+        String border = buildTableBorder(formatters);
+
+        table.append(border).append("\n");
+        table.append(buildHeaderRow(formatters)).append("\n");
+        table.append(border).append("\n");
+
+        int maxRows = Math.max(Math.max(entities1.size(), entities2.size()), entities3.size());
+        for (int i = 0; i < maxRows; i++) {
+            table.append(buildDataRow(i,
+                            entities1, formatter1,
+                            entities2, formatter2,
+                            entities3, formatter3))
+                    .append("\n");
+        }
+
+        table.append(border);
+        return table.toString();
+    }
+
+    public static String CreateTable(List<Customer> customers, List<Waiter> waiters, List<Chef> chefs) {
+        ITableDesign<Customer> customerFormatter = createEntityFormatter("Customer",
+                customer -> {
+                    String stateInfo = customer.getState() != null ?
+                            formatStateDetails(customer.getState().getStateName()) : "waiting";
+                    return String.format("%s(%d) ~> %s", customer.getInitial(), customer.getTolerance(), stateInfo);
+                });
+
+        ITableDesign<Waiter> waiterFormatter = createEntityFormatter("Waiter",
+                waiter -> {
+                    String stateInfo = waiter.getState() != null ?
+                            formatStateDetails(waiter.getState().getStateName()) : "waiting";
+                    return String.format("%s ~> %s", waiter.getInitial(), stateInfo);
+                });
+
+        ITableDesign<Chef> chefFormatter = createEntityFormatter("Chef",
+                chef -> {
+                    String stateInfo = chef.getState() != null ?
+                            formatStateDetails(chef.getState().getStateName()) : "waiting";
+                    return String.format("%s ~> %s", chef.getInitial(), stateInfo);
+                });
+
+        return buildTable(customers, customerFormatter, waiters, waiterFormatter, chefs, chefFormatter);
     }
 }

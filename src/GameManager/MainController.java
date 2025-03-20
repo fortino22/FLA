@@ -8,8 +8,8 @@ import views.HighscoreView;
 
 import java.util.List;
 
-import controllers.managers.HighscoreManager;
-import controllers.managers.HighscoreManager.RestaurantScore;
+import controllers.singleton.HighscoreSingleton;
+import controllers.singleton.HighscoreSingleton.RestaurantScore;
 
 public class MainController {
 
@@ -54,13 +54,12 @@ public class MainController {
     }
 
     private boolean displayHighscores() {
-        List<RestaurantScore> scores = HighscoreManager.getInstance().getHighscores();
+        List<RestaurantScore> scores = HighscoreSingleton.getInstance().getHighscores();
         highscoreView.showHighscores(scores);
         return true;
     }
 
     private boolean exitApplication() {
-        System.out.println("JOIN NAR 25-2!!!!");
         System.exit(0);
         return false;
     }

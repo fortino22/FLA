@@ -1,13 +1,13 @@
 package models.states.chefstate;
 
 import models.entity.Chef;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class ChefCook extends BaseState {
+public class ChefCooking extends StartingState {
     private static final int cookingTIme = 6;
     private int remainingCookingTime;
 
-    public ChefCook(Chef chef, String customerName) {
+    public ChefCooking(Chef chef, String customerName) {
         super(chef, customerName);
         this.remainingCookingTime = cookingTIme - chef.getSpeed();
     }
@@ -20,11 +20,11 @@ public class ChefCook extends BaseState {
     }
 
     private void transitionToChefDone() {
-        entity.setState(new ChefDone((Chef) entity, customerName));
+        entity.setState(new ChefFinish((Chef) entity, customerName));
     }
 
     @Override
     public String getStateName() {
-        return String.format("cooking(%s)", customerName);
+        return String.format("cooking food for (%s)", customerName);
     }
 }

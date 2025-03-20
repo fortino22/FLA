@@ -9,83 +9,79 @@ import models.factory.WaiterFactory;
 import helpers.CustomerInitials;
 
 public class GameFacade {
-    private static volatile GameFacade instance;
-    private Restaurant restaurant;
-    private RestaurantMediator mediator;
-    
+    private static volatile GameFacade gameInstance;
+    private Restaurant restaurantModel;
+    private RestaurantMediator restaurantMediator;
+
     private GameFacade() {
-        mediator = new RestaurantMediator();
+        restaurantMediator = new RestaurantMediator();
     }
-    
+
     public static GameFacade getInstance() {
-        if (instance == null) {
-            instance = new GameFacade();
+        if (gameInstance == null) {
+            gameInstance = new GameFacade();
         }
-        return instance;
+        return gameInstance;
     }
-    
+
+    public Restaurant getCurrentRestaurant() {
+        return restaurantModel;
+    }
+
+    public boolean isGamePaused() {
+        return restaurantMediator.isPaused();
+    }
+
     public void initializeGame(String name) {
-        restaurant = Restaurant.createRestaurant(name);
-        mediator.setRestaurant(restaurant);
+        restaurantModel = Restaurant.createRestaurant(name);
+        restaurantMediator.setRestaurant(restaurantModel);
         setupInitialGameEnvironment();
     }
-    
-    public void pause() {
 
-        mediator.pauseAllOperations();
-    }
-    
-    public void resume() {
-
-        mediator.resumeAllOperations();
-    }
-    
-    public boolean isGamePaused() {
-
-        return mediator.isPaused();
-    }
-    
     public void update() {
-        if (restaurant != null) {
-            restaurant.update();
-            mediator.updateEntities();
+        if (restaurantModel != null) {
+            restaurantModel.update();
+            restaurantMediator.updateEntities();
         }
     }
-    
-    public Restaurant getCurrentRestaurant() {
 
-        return restaurant;
+    public void pause() {
+        restaurantMediator.pauseOperations();
+    }
+
+    public void resume() {
+        restaurantMediator.resumeAllOperations();
+    }
+
+    public void terminate() {
+        if (restaurantMediator != null) {
+            restaurantMediator.shutdown();
+        }
+        CustomerGenerator.getInstance().stop();
+    }
+
+    public void addChef() {
+        if (restaurantModel != null) {
+            Chef chef = ChefFactory.getInstance().createChef();
+            chef.setMediator(restaurantMediator);
+            restaurantModel.addChef(chef);
+        }
+    }
+
+    public void addWaiter() {
+        if (restaurantModel != null) {
+            Waiter waiter = WaiterFactory.getInstance().createWaiter();
+            waiter.setMediator(restaurantMediator);
+            restaurantModel.addWaiter(waiter);
+        }
     }
 
     private void setupInitialGameEnvironment() {
-        if (restaurant != null) {
+        if (restaurantModel != null) {
             for (int i = 0; i < CustomerInitials.defaultWaiter; i++) {
                 addWaiter();
                 addChef();
             }
         }
-    }
-    
-    public void addWaiter() {
-        if (restaurant != null) {
-            Waiter waiter = WaiterFactory.getInstance().createWaiter();
-            waiter.setMediator(mediator);
-            restaurant.addWaiter(waiter);
-        }
-    }
-    
-    public void addChef() {
-        if (restaurant != null) {
-            Chef chef = ChefFactory.getInstance().createChef();
-            chef.setMediator(mediator);
-            restaurant.addChef(chef);
-        }
-    }
-    
-    public void terminate() {
-        if (mediator != null) {
-            mediator.shutdown();
-        }
-        CustomerGenerator.getInstance().stop();
     }
 }

@@ -3,15 +3,15 @@ package views;
 import java.util.List;
 import java.util.Scanner;
 
-import controllers.managers.HighscoreManager.RestaurantScore;
+import controllers.singleton.HighscoreSingleton.RestaurantScore;
 import helpers.Cleaner;
 
 public class HighscoreView {
+
     public void showHighscores(List<RestaurantScore> scores) {
         Cleaner.cls();
-        System.out.println("═══════════════════════");
-        System.out.println("      HIGHSCORES");
-        System.out.println("═══════════════════════");
+        System.out.println("Highscores:");
+        System.out.println("----------");
 
         if (scores.isEmpty()) {
             System.out.println("No highscores yet!");
@@ -26,7 +26,7 @@ public class HighscoreView {
             }
         }
 
-        System.out.println("═══════════════════════");
+        System.out.println("----------");
         System.out.println("Press Enter to continue...");
         new Scanner(System.in).nextLine();
     }

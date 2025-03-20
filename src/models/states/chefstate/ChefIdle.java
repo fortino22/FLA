@@ -1,9 +1,9 @@
 package models.states.chefstate;
 
 import models.entity.Chef;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class ChefIdle extends BaseState {
+public class ChefIdle extends StartingState {
     public ChefIdle(Chef chef) {
         super(chef);
     }
@@ -22,7 +22,7 @@ public class ChefIdle extends BaseState {
     public void changeState(String customerName) {
         Chef chef = (Chef)entity;
         if (chef.getCurrentCustomer() == null) {  
-            chef.setState(new ChefCook((Chef)entity, customerName));
+            chef.setState(new ChefCooking((Chef)entity, customerName));
         } else {
         }
     }

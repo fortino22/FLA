@@ -1,10 +1,10 @@
 package models.states.chefstate;
 
 import models.entity.Chef;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class ChefDone extends BaseState {
-    public ChefDone(Chef chef, String customerName) {
+public class ChefFinish extends StartingState {
+    public ChefFinish(Chef chef, String customerName) {
         super(chef, customerName);
     }
 
@@ -15,7 +15,7 @@ public class ChefDone extends BaseState {
 
     @Override
     public String getStateName() {
-        return String.format("finish(%s)", customerName);
+        return String.format("finish cooking for (%s)", customerName);
     }
 
     @Override

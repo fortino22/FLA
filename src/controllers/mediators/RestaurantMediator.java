@@ -9,43 +9,45 @@ import interfaces.ICustomerObserver;
 import helpers.Alert;
 
 import java.util.*;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import controllers.observers.CustomerGenerator;
 
 public class RestaurantMediator implements ICustomerObserver {
     private Restaurant restaurant;
     private boolean isPaused;
-    private final Random Random;
-    private final Set<Customer> CustomersBeingServed;
-    private final Map<Customer, Chef> CustomerChefAssignments = new HashMap<>();
-    
+    private final Random random;
+    private final Set<Customer> customersBeingServed;
+    private final Map<Customer, Chef> customerChefAssignments;
+
+    private static final int CUSTOMER_SPAWN_CHANCE = 25;
+
     public RestaurantMediator() {
-        this.Random = new Random();
-        this.CustomersBeingServed = new HashSet<>();
+        this.random = new Random();
+        this.customersBeingServed = ConcurrentHashMap.newKeySet();
+        this.customerChefAssignments = new ConcurrentHashMap<>();
     }
-    
+
     public void setRestaurant(Restaurant restaurant) {
         this.restaurant = restaurant;
         restaurant.setMediator(this);
         restaurant.initialize();
 
+        initializeAllEntities();
+        initializeCustomerGenerator();
+    }
+
+    private void initializeAllEntities() {
         initializeEntities(restaurant.getChefs());
         initializeEntities(restaurant.getWaiters());
         initializeEntities(restaurant.getCustomers());
-
-        InitializeCustomerGenerator();
     }
-
 
     private <T extends ParentEntity> void initializeEntities(List<T> entities) {
-        for (T entity : entities) {
-            entity.setMediator(this);
-        }
+        entities.forEach(entity -> entity.setMediator(this));
     }
 
-    private void InitializeCustomerGenerator() {
+    private void initializeCustomerGenerator() {
         CustomerGenerator customerGenerator = CustomerGenerator.getInstance();
         customerGenerator.setRestaurant(restaurant);
         customerGenerator.addObserver(this);
@@ -54,125 +56,108 @@ public class RestaurantMediator implements ICustomerObserver {
 
     @Override
     public void CustomerGenerator() {
+        createAndProcessNewCustomer();
+    }
+
+    public void updateEntities() {
+        if (isPaused || restaurant == null) return;
+
+        updateAllEntities();
+        trySpawnRandomCustomer();
+    }
+
+    private void updateAllEntities() {
+        updateEntitiesList(restaurant.getChefs());
+        updateEntitiesList(restaurant.getWaiters());
+        updateEntitiesList(restaurant.getCustomers());
+    }
+
+    private <T extends ParentEntity> void updateEntitiesList(List<T> entities) {
+        entities.forEach(ParentEntity::update);
+    }
+
+    private void trySpawnRandomCustomer() {
+        if (random.nextInt(100) < CUSTOMER_SPAWN_CHANCE &&
+                restaurant.getCustomers().size() < restaurant.getSeats()) {
+            createAndProcessNewCustomer();
+        }
+    }
+
+    private void createAndProcessNewCustomer() {
         Customer customer = CustomerFactory.getInstance().createCustomer();
         customer.setMediator(this);
         restaurant.addCustomer(customer);
         processNewCustomer(customer);
     }
 
-    public void updateEntities() {
-        if (isPaused || restaurant == null) return;
-
-        updateAllEntities(restaurant.getChefs());
-        updateAllEntities(restaurant.getWaiters());
-        updateAllEntities(restaurant.getCustomers());
-        trySpawnCustomer();
-    }
-
-    private <T extends ParentEntity> void updateAllEntities(List<T> entities) {
-        for (T entity : entities) {
-            entity.update();
-        }
-    }
-    
-    private void trySpawnCustomer() {
-        if (Random.nextInt(100) < 25 && restaurant.getCustomers().size() < restaurant.getSeats()) {
-            Customer customer = CustomerFactory.getInstance().createCustomer();
-            customer.setMediator(this);
-            restaurant.addCustomer(customer);
-            processNewCustomer(customer);
-        }
-    }
-
     private void processNewCustomer(Customer customer) {
-        Alert.restaurantMediatorDebug("Processing new customer: " + customer.getInitial());
         customer.startOrdering();
         assignCustomerToWaiter(customer);
     }
 
     public void assignCustomerToWaiter(Customer customer) {
-        if (CustomersBeingServed.contains(customer)) {
+        if (customersBeingServed.contains(customer)) {
             return;
         }
 
-        Alert.restaurantMediatorDebug("Looking for available waiter for " + customer.getInitial());
-        for (Waiter waiter : restaurant.getWaiters()) {
-            if (waiter.getState() instanceof WaiterIdle) {
-                Alert.restaurantMediatorDebug("Found idle waiter: " + waiter.getInitial());
-                CustomersBeingServed.add(customer);
-                waiter.handleOrder(customer);
-                return;
-            }
-        }
+
+        restaurant.getWaiters().stream()
+                .filter(waiter -> waiter.getState() instanceof WaiterIdle)
+                .findFirst()
+                .ifPresent(waiter -> {
+                    customersBeingServed.add(customer);
+                    waiter.handleOrder(customer);
+                });
     }
 
     public void CustomerFinished(Customer customer) {
-        Alert.restaurantMediatorDebug("Customer " + customer.getInitial() + " finished and is leaving");
-        Chef assignedChef = CustomerChefAssignments.remove(customer);
+
+        Chef assignedChef = customerChefAssignments.remove(customer);
         if (assignedChef != null) {
             assignedChef.finishOrder();
         }
-        CustomersBeingServed.remove(customer);
+
+        customersBeingServed.remove(customer);
         restaurant.removeCustomer(customer);
     }
 
     public void assignOrderToChef(Waiter waiter, Customer customer) {
-        if (customer == null || CustomerChefAssignments.containsKey(customer)) {
+        if (customer == null || customerChefAssignments.containsKey(customer)) {
             return;
         }
-        
-        Alert.restaurantMediatorDebug("Looking for available chef for customer " + customer.getInitial());
-        for (Chef chef : restaurant.getChefs()) {
-            if (chef.getState() instanceof ChefIdle && chef.getCurrentCustomer() == null) {
-                Alert.restaurantMediatorDebug("Found idle chef: " + chef.getInitial());
-                CustomerChefAssignments.put(customer, chef);
-                waiter.setAssignedChef(chef);  
-                chef.handleOrder(customer, waiter);
-                return;
-            }
-        }
+
+
+        restaurant.getChefs().stream()
+                .filter(chef -> chef.getState() instanceof ChefIdle && chef.getCurrentCustomer() == null)
+                .findFirst()
+                .ifPresent(chef -> {
+                    customerChefAssignments.put(customer, chef);
+                    waiter.setAssignedChef(chef);
+                    chef.handleOrder(customer, waiter);
+                });
     }
 
-    public void pauseAllOperations() {
+    public void pauseOperations() {
         isPaused = true;
-        for (Chef chef : restaurant.getChefs()) {
-            chef.pause();
-        }
-        for (Waiter waiter : restaurant.getWaiters()) {
-            waiter.pause();
-        }
-        for (Customer customer : restaurant.getCustomers()) {
-            customer.pause();
-        }
+        executeForAllEntities(ParentEntity::pause);
     }
 
     public void resumeAllOperations() {
         isPaused = false;
-        for (Chef chef : restaurant.getChefs()) {
-            chef.resume();
-        }
-        for (Waiter waiter : restaurant.getWaiters()) {
-            waiter.resume();
-        }
-        for (Customer customer : restaurant.getCustomers()) {
-            customer.resume();
-        }
+        executeForAllEntities(ParentEntity::resume);
     }
 
     public void shutdown() {
-        stopEntities(restaurant.getChefs());
-        stopEntities(restaurant.getWaiters());
-        stopEntities(restaurant.getCustomers());
+        executeForAllEntities(ParentEntity::stop);
     }
 
-    private <T extends ParentEntity> void stopEntities(List<T> entities) {
-        for (T entity : entities) {
-            entity.stop();
-        }
+    private void executeForAllEntities(java.util.function.Consumer<ParentEntity> operation) {
+        restaurant.getChefs().forEach(operation);
+        restaurant.getWaiters().forEach(operation);
+        restaurant.getCustomers().forEach(operation);
     }
-    
+
     public boolean isPaused() {
-
         return isPaused;
     }
 }

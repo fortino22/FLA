@@ -11,10 +11,8 @@ public class RestaurantRunning extends RestaurantState {
     @Override
     public void onEnter(Restaurant restaurant) {
         if (restaurant.getMediator() != null) {
-            Alert.restaurantDebug("Restaurant entered Running state");
             restaurant.getMediator().resumeAllOperations();
         } else {
-            Alert.restaurantDebug("Warning: Restaurant mediator not set during Running state entry");
         }
     }
 

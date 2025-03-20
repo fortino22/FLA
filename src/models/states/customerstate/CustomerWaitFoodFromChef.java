@@ -1,12 +1,12 @@
 package models.states.customerstate;
 
 import models.entity.Customer;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class CustomerWaitFoodChef extends BaseState {
+public class CustomerWaitFoodFromChef extends StartingState {
     private int toleranceTimer = 0;
 
-    public CustomerWaitFoodChef(Customer customer, String chefName) {
+    public CustomerWaitFoodFromChef(Customer customer, String chefName) {
         super(customer, chefName);
     }
 

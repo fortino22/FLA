@@ -1,11 +1,11 @@
 package models.states.customerstate;
 
 import models.entity.Customer;
-import models.states.BaseState;
+import models.states.BaseState.StartingState;
 
-public class CustomerOrderWaiter extends BaseState {
+public class CustomerOrderToWaiter extends StartingState {
 
-    public CustomerOrderWaiter(Customer customer, String waiterName) {
+    public CustomerOrderToWaiter(Customer customer, String waiterName) {
         super(customer, waiterName);
     }
 
